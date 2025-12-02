@@ -6,3 +6,7 @@ pytest-cov
 pytest-benchmark
 pytest-md-report
 beautifulsoup4
+build
+wheel
+setuptools
+twine
