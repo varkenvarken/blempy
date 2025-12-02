@@ -1,0 +1,13 @@
+{
+    "python.testing.pytestArgs": [
+        "tests",
+        "--cov=blempy",
+        "--cov-report=xml",
+        "--benchmark-autosave",
+        "--benchmark-skip"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "markdown-pdf.outputDirectoryRelativePathFile": true,
+    "markdown-pdf.outputDirectory": "."
+}
