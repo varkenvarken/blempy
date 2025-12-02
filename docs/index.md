@@ -8,41 +8,21 @@
 > This module is not fully fleshed out yet, and its contents/interface may change
 
 ## Key classes
-- `PropertyCollectionAttributeProxy`
-  - Purpose: bulk transfer for any property-collection attribute (uses foreach_get/foreach_set).
-  - Important members:
-    - get(): fills/allocates a float32 NumPy array from the property collection.
-    - set(): writes the NumPy array back to the property collection.
-    - ndarray, items, length: current array and shape metadata.
-  - Behavior: automatically reallocates array when collection size or vector length changes. Raises ValueError on empty collections.
 
-- `VectorCollectionProxy(PropertyCollectionAttributeProxy)`
-  - Purpose: convenient access to 3D/4D vector collections.
-  - Methods:
-    - extend(normal=False): append a 4th column (ones by default, zeros if normal=True).
-    - discard(): remove the 4th column.
-    - \_\_matmul__(matrix): apply a matrix to all vectors (in-place) and return self.
+This module contains several utility classes which allow for efficient manipulation of property collections.
 
-- `LoopVectorAttributeProxy`
-  - Purpose: convenient access to loop layer attributes, i.e. attributes associated with face corners, like uv-coordinates.
-  - Methods:
-    - \_\_matmul____(matrix): apply a matrix to all vectors (in-place) and return self.
-    - \_\_iter____ and \_\_next____: to return all the loop layer attributes for each polygon in a mesh
-    - \_\_len____: returns the number of polygons in a mesh
+The class `PropertyCollection` takes care of allocating suitably sized and shaped numpy ndarrays 
+when getting attributes from a property collection and can also copy those values back.
 
-- `AttributeProxy`
-  - Purpose: access to any layer in the unified attribute layers of a Mesh. 
-  - Methods:
-    - \_\_iter____ and \_\_next____: to return all the loop layer attributes for each polygon in a mesh
-    - \_\_len____: returns the number of polygons in a mesh
-    - \_\_getitem()\_\_: return a single item (i.e. a vector, a scalar value, or (for lop layer properties) an array of vectors)  
-    - \_\_setitem()\_\_: set the value of an item
+The class `UnifiedAttribute` is designed to deal with unified attribute layers, including those in the CORNER domain.
+These so called loop layers are associated with, but separated from, faces and indexed using loop indices stored
+with a face. These loop indices are property collections too, but this is all dealt with transparently.
 
-## Characteristics / notes
+Both classes behave like lists: they can be iterated over and allow index based access.
 
-- Designed around Blender's volatile property-collection references — proxies compute references on each get/set.
-- Intended for workflows where mesh data is read/written in bulk (faster than per-item Python attribute access).
-- Raises clear exceptions for empty collections or incompatible shapes.
+They also provide utility functions to work with properties that are vectors, for example they
+have methods to convert between 3D and 4D vectors as well as a __matmul__ method for matrix multiplication with
+the `@` operator, which will apply the matrix multiplication to the whole collection of vector properties at once.
 
 ## Minimal usage examples
 
@@ -51,10 +31,10 @@ Transforming all vertex coordinates:
 ```python
 from mathutils import Matrix
 from bpy.context import active_object
-from blempy import VectorCollectionProxy
+from blempy import PropertyCollection
 
 mesh = active_object.data
-vproxy = VectorCollectionProxy(mesh, "vertices", "co")
+vproxy = PropertyCollection(mesh, "vertices", "co")
 vproxy.get()                        # load vertex coordinates into vproxy.ndarray
 vproxy.extend()                     # convert to 4D so that matrix multiplication
                                     # can deal with translation too
@@ -71,11 +51,11 @@ Give all faces of a mesh a uniform but unique random greyscale color:
 ```python
 from random import random
 from bpy.context import active_object
-from blempy import AttributeProxy
+from blempy import UnifiedAttribute
 
 mesh = active_object.data
 # assume the mesh already has a vertex color layer called "Color"
-proxy = blempy.AttributeProxy(mesh, "Color")
+proxy = blempy.UnifiedAttribute(mesh, "Color")
 
 # iterate over faces and set all loops in each individual face to a distinct grey level
 # setting all loops to the same value will cause the face to have a uniform color
@@ -104,20 +84,7 @@ If you are developing an addon that uses the `blempy` package, it is probably ea
 
 - [ ] additional convenience functions for frequently used vector operations like translate, scale, rotate, space conversions, ...
 - [ ] ... possibly even mapped to dunder methods (like `__add__` for translation or `__mul__` for scale, etc.)
-- [x] a specific subclass to deal with properties that are associated with the loop layer
-
-  like vertex colors and uv coordinates
-
-- [x] extend AttributeProxy to instantiate a proxy by refering to layers directly or by index
-
-  for example to refer mesh.attributes.active directly
-
-- [ ] extend AttributeProxy to work with non-loop attributes
-      
-  vertex, edge, face, ...
-
-- [ ] extend AttributeProxy to work with BMesh objects
-- [ ] extend AttributeProxy to work with non mesh objects
+- [ ] extend AttributeProxy to work with objects types other than Mesh and PointCloud
 
   curve etc.
 
