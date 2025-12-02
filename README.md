@@ -1,3 +1,5 @@
+![Blempy](docs/blempy-logo.svg)
+
 [![Blender](docs/blender-version.svg)](https://www.blender.org/download/releases/4-4/) ![Python](docs/python.svg) [![Test Status](https://github.com/varkenvarken/blempy/actions/workflows/test_all.yml/badge.svg)](https://github.com/varkenvarken/blempy/actions/workflows/test_all.yml) ![Coverage](docs/coverage.svg) ![PyPI - Version](https://img.shields.io/pypi/v/blempy)
 
 # blempy — Blender ↔ NumPy helpers

@@ -1,3 +1,5 @@
+![Blempy logo](./blempy-logo.svg)
+
 ![PyPI - Version](https://img.shields.io/pypi/v/blempy)
 
 # blempy — Blender ↔ NumPy helpers
