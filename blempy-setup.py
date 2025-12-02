@@ -3,15 +3,15 @@ from setuptools import setup
 from pathlib import Path
 
 this_directory = Path(__file__).parent
-long_description = (this_directory / "blempy.md").read_text()
+long_description = (this_directory / "docs/index.md").read_text()
 
 setup(
     name="blempy",
-    version="0.3.0",
+    version="0.4.0",
     description="Easy and fast access to Blender attributes",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://varkenvarken.github.io/blenderaddons-ng/",
+    url="https://varkenvarken.github.io/blempy/",
     author="varkenvarken",
     author_email="test@example.com",
     license="GPLv3",
