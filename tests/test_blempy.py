@@ -132,20 +132,23 @@ class TestPropertyCollection:
 
         # mutliplication by the identity matrix should not change anything
         result = test_proxy @ identity3
-        assert (
-            result is test_proxy
-        )  # multiplication is in place, i.e. left hand side is returned
-        assert np.allclose(result.ndarray, cube)
+        assert result is not test_proxy   # it should return a new result
+        assert np.allclose(result, cube)  # this result should be indentical to the original
+        assert np.allclose(test_proxy.ndarray, cube) # and the original should be untouched
 
-        # rotate all vertice 45 degrees around the z-axis
-        rot_z_45deg = Matrix.Rotation(pi / 4, 3, [0, 0, 1])
+        # rotate all vertice 45 degrees clockwise around the z-axis
+        rot_z_45deg = Matrix.Rotation(pi / 4, 3, [0, 0, 1])  # a 3x3 matrix
         result = test_proxy @ rot_z_45deg
 
         # compare to the list of vertices rotated one by one
-        s = sin(pi / 4)
-        c = cos(pi / 4)
+        s = sin(-pi / 4)
+        c = cos(-pi / 4)
         cube_rotated = [[v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]] for v in cube]
-        np.allclose(result.ndarray, cube_rotated)
+
+        # we need a slightly bigger tolerance here because python internal math is not exactly
+        # the same as numpy math on float32 numbers, but that's ok because we mainly want to see if
+        # the results of the rotation go in the right direction
+        assert np.allclose(result, np.array(cube_rotated, dtype=np.float32), atol=1e-6)
 
     def test_vertex_co_property_extend_discard(self, cube):
         # Create a new object and set as active
@@ -195,20 +198,18 @@ class TestPropertyCollection:
 
         # mutliplication by the identity matrix should not change anything
         result = test_proxy @ identity4
-        assert (
-            result is test_proxy
-        )  # multiplication is in place, i.e. left hand side is returned
-        assert np.allclose(result.ndarray[:, :3], cube)
+        assert result is not test_proxy
+        assert np.allclose(result[:, :3], cube)
 
-        # rotate all vertice 45 degrees around the z-axis
-        rot_z_45deg = Matrix.Rotation(pi / 4, 4, [0, 0, 1])
+        # rotate all vertices 45 degrees around the z-axis
+        rot_z_45deg = Matrix.Rotation(pi / 4, 4, [0, 0, 1])  # a 4x4 matrix
         result = test_proxy @ rot_z_45deg
 
         # compare to the list of vertices rotated one by one
-        s = sin(pi / 4)
-        c = cos(pi / 4)
+        s = sin(-pi / 4)
+        c = cos(-pi / 4)
         cube_rotated = [[v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]] for v in cube]
-        np.allclose(result.ndarray[:, :3], cube_rotated)
+        np.allclose(result[:, :3], cube_rotated, atol=1e-6)
 
     def test_vertex_co_property_matmul_translate4(self, cube):
         # Create a new object and set as active
@@ -221,11 +222,28 @@ class TestPropertyCollection:
         test_proxy.extend()
 
         # translate 1 unit along the z-axis
-        rot_z_45deg = Matrix.Translation([0, 0, 1])
-        result = test_proxy @ rot_z_45deg
+        translate = Matrix.Translation([0, 0, 1])  # a translation matrix is always 4x4
+        result = test_proxy @ translate
 
         # check that the matrix multiplication in this case is identical to a direct translation
-        np.allclose(result.ndarray[:, :3], cube + [0, 0, 1])
+        np.allclose(result[:, :3], cube + [0, 0, 1])
+
+    def test_vertex_co_property_imatmul_translate4(self, cube):
+        # Create a new object and set as active
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        test_proxy = blempy.PropertyCollection(obj.data, "vertices", "co")
+
+        test_proxy.get()
+        test_proxy.extend()
+
+        # translate 1 unit along the z-axis
+        translate = Matrix.Translation([0, 0, 1])  # a translation matrix is always 4x4
+        test_proxy @= translate
+
+        # check that the matrix multiplication in this case is identical to a direct translation
+        np.allclose(test_proxy[:, :3], cube + [0, 0, 1])
 
     def test_vertex_co_property_empty_mesh(self):
         # Create a new object and set as active

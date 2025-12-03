@@ -187,10 +187,11 @@ class PropertyCollection:
         self.ndarray = self.ndarray[:, :3]
         self.length = 3
 
-    def __matmul__(self, matrix:ArrayLike):
-        np.dot(self.ndarray, matrix)
-        return self
+    def __matmul__(self, matrix):
+        return np.dot(self.ndarray, matrix)
 
+    def __imatmul__(self, matrix):
+        return np.dot(self.ndarray, matrix, out=self.ndarray)
 
 class UnifiedAttribute:
     default_attribute = {
@@ -362,5 +363,10 @@ class UnifiedAttribute:
         self.loop_attributes.discard()
 
     def __matmul__(self, matrix):
-        self.loop_attributes.__matmul__(matrix)
-        return self
+        return self.loop_attributes.__matmul__(matrix)
+
+    def __imatmul__(self, matrix):
+        return self.loop_attributes.__imatmul__(matrix)
+
+    def __iadd__(self, other):
+        self.loop_attributes += other
