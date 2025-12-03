@@ -236,7 +236,9 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
           : 'default'
     });
   </script>
+  <img src="./blempy-logo.svg" width="250px"/>
   <p>
+   <img alt="GitHub Release" src="https://img.shields.io/github/v/release/varkenvarken/blempy?include_prereleases&amp;logo=github"/>
    <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/blempy"/>
   </p>
   <h1 id="blempy--blender-%E2%86%94-numpy-helpers">
@@ -279,10 +281,34 @@ These so called loop layers are associated with, but separated from, faces and i
 with a face. These loop indices are property collections too, but this is all dealt with transparently.
   </p>
   <p>
-   Both classes behave like lists: they can be iterated over and allow index based access.
+   Both classes behave like lists: they can be iterated over and allow index based access. The key difference between
+the two classes is that the
+   <code>
+    UnifiedAttribute
+   </code>
+   class will iterate over polygons (faces) if it dealing with an attribute in the CORNER domain and return a reference to an array of attributes, otherwise it will behave like a regular
+   <code>
+    PropertyCollection
+   </code>
+   and return a reference to a single attribute.
   </p>
   <p>
-   They also provide utility functions to work with properties that are vectors, for example they
+   The references that will be returned are always numpy arrays, for the uv coordinates of a single face with 4 vertices, an
+   <a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html">
+    ndarray
+   </a>
+   with shape (4,2) will be returned, whereas for the
+   <code>
+    hide
+   </code>
+   attribute of a face, an ndarray with shape (1,) will be returned. All those references are
+   <a href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.view.html">
+    views
+   </a>
+   , not copies, so can be assigned to.
+  </p>
+  <p>
+   Both classes also provide utility functions to work with properties that are vectors, for example they
 have methods to convert between 3D and 4D vectors as well as a
    <strong>
     matmul
@@ -306,15 +332,14 @@ the
 
 mesh = active_object.data
 vproxy = PropertyCollection(mesh, <span class="hljs-string">"vertices"</span>, <span class="hljs-string">"co"</span>)
-vproxy.get()                        <span class="hljs-comment"># load vertex coordinates into vproxy.ndarray</span>
-vproxy.extend()                     <span class="hljs-comment"># convert to 4D so that matrix multiplication</span>
-                                    <span class="hljs-comment"># can deal with translation too</span>
-<span class="hljs-comment"># combine a rotation and a translation into a single matrix</span>
-matrix = Matrix.Rotation(pi/<span class="hljs-number">4</span>, <span class="hljs-number">4</span>, [<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>])
-matrix = matrix @ Matrix.Translation(<span class="hljs-number">4</span>, [<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>])    
-vproxy = vproxy @ matrix            <span class="hljs-comment"># transform in-place</span>
-vproxy.discard()                    <span class="hljs-comment"># discard the 4th column</span>
-vproxy.set()                        <span class="hljs-comment"># write back to mesh</span>
+vproxy.get()                                      <span class="hljs-comment"># load vertex coordinates into vproxy.ndarray</span>
+vproxy.extend()                                   <span class="hljs-comment"># convert to 4D so that matrix multiplication</span>
+                                                  <span class="hljs-comment"># can deal with translation too</span>
+matrix = Matrix.Rotation(pi/<span class="hljs-number">4</span>, <span class="hljs-number">4</span>, [<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>])        <span class="hljs-comment"># combine a rotation and</span>
+matrix = matrix @ Matrix.Translation(<span class="hljs-number">4</span>, [<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>])  <span class="hljs-comment"># a translation into a single matrix  </span>
+vproxy = vproxy @ matrix                          <span class="hljs-comment"># transform in-place</span>
+vproxy.discard()                                  <span class="hljs-comment"># discard the 4th column</span>
+vproxy.set()                                      <span class="hljs-comment"># write back to mesh</span>
 </div></code></pre>
   <p>
    Give all faces of a mesh a uniform but unique random greyscale color:
@@ -353,22 +378,28 @@ proxy.set()
   <pre class="hljs"><code><div>python -m pip install blempy
 </div></code></pre>
   <p>
-   But that would install the package in the default location. That is fine if you use Blender as a module, but if your are developing for the "complete" Blender, you would need to install it inside your Blender environment. A refresher on how to do that can be found in
-   <a href="https://blog.michelanders.nl/2021/06/installing-python-packages-with-pip-in-your-blender-environment.html">
-    this old article
-   </a>
-   .
+   But that would install the package in the default location. That is fine if you use Blender as a module,
+but if your are developing an add-on that you want to bundle and distribute to others, it is probably best
+to install it right into the folder of the add-on you are developing:
   </p>
+  <pre class="hljs"><code><div><span class="hljs-built_in">cd</span> your-add-on
+python -m pip install -t . blempy
+</div></code></pre>
   <p>
-   If you are developing an addon that uses the
+   If for some reason you want to install
    <code>
     blempy
    </code>
-   package, it is probably easiest to bundle it with your add-on, i.e. simply copy the
-   <a href="/blempy/">
-    blempy folder
+   inside your Blender environment,
+then things are a bit more complicated because you will need to find out
+where the python that is bundled with Blender is and then install it there.
+A refresher on how to do that can be found in
+   <a href="https://blog.michelanders.nl/2021/06/installing-python-packages-with-pip-in-your-blender-environment.html">
+    this old article
    </a>
-   from the repository into your own project. By copying, you automatically fix the version, so that if blempy gets a breaking update you won´t have to deal with that immediately.
+   ,
+but think twice before you decide to do that because you will have to repeat this every
+time you install a new version of Blender.
   </p>
   <h2 id="todo">
    TODO
