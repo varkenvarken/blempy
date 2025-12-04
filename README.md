@@ -4,9 +4,21 @@
 
 # blempy — Blender ↔ NumPy helpers
 
-`blempy` provides small, safe utilities to efficiently transfer Blender property-collection attributes (e.g. vertex coordinates) to/from NumPy arrays and perform vectorized operations with minimal Python overhead.
+`blempy` provides small, safe utilities to efficiently transfer Blender property-collection attributes (e.g. vertex coordinates, vertex colors, edge crease values, etc.) to/from NumPy arrays and perform vectorized operations with minimal Python overhead.
 
-More information on [the website](https://varkenvarken.github.io/blempy/) accompanying this repo.
+It utilizes Blender's foreach_get()/foreach_set() to access attributes as Numpy arrays, but does away with much of the boilerplate by figuring out array dimensions and providing convenient iterators and helper functions, evn for attributes that are associated with loops (a.k.a. face corners).
+
+Assuming `mesh` is a `bpy.types.Mesh` object that has a vertex color layer called "Color",  scaling all rgb components of those vertex colors by half reduces to a few lines of code:
+
+```python
+proxy = blempy.UnifiedAttribute(mesh, "Color")
+proxy.get()
+for polygon_loops in proxy:
+    polygon_loops[:,:3] *= 0.5
+proxy.set()
+```
+
+More information, including installation instructions, can be found on [the website](https://varkenvarken.github.io/blempy/) accompanying this repo.
 
 ## contributing
 
