@@ -19,6 +19,7 @@ have methods to convert between 3D and 4D vectors as well as a __matmul__ method
 the `@` operator, which will apply the matrix multiplication to the whole collection of vectro properties at once.
 """
 
+
 class PropertyCollection:
     def _property_from_key(self):
         """
@@ -32,9 +33,7 @@ class PropertyCollection:
         property_collection = getattr(self.object, prop)
         return property_collection[name].data
 
-    def __init__(
-        self, obj: ID, property_collection: str, attribute: str
-    ) -> None:
+    def __init__(self, obj: ID, property_collection: str, attribute: str) -> None:
         """
         Initialize an property collection proxy.
 
@@ -81,7 +80,12 @@ class PropertyCollection:
             length = len(attr) if hasattr(attr, "__len__") else 1
             attr_type = type(attr) if type(attr) in {bool, int} else np.float32
             # if we haven't allocated an array yet or its shape has changed, we allocate one
-            if self.ndarray is None or items != self.items or length != self.length or self.extended:
+            if (
+                self.ndarray is None
+                or items != self.items
+                or length != self.length
+                or self.extended
+            ):
                 self.ndarray = np.empty(items * length, dtype=attr_type)
                 self.items = items
                 self.length = length
@@ -194,6 +198,36 @@ class PropertyCollection:
         np.dot(self.ndarray, matrix, out=self.ndarray)
         return self
 
+    # utility methods focused on general array operations
+
+    def __add__(self, other):
+        return self.ndarray + other
+
+    def __iadd__(self, other):
+        self.ndarray += other
+        return self
+
+    def __sub__(self, other):
+        return self.ndarray - other
+
+    def __isub__(self, other):
+        self.ndarray -= other
+        return self
+
+    def __mul__(self, other):
+        return self.ndarray * other
+
+    def __imul__(self, other):
+        self.ndarray *= other
+        return self
+
+    def __truediv__(self, other):
+        return self.ndarray / other
+
+    def __itruediv__(self, other):
+        self.ndarray /= other
+        return self
+
 class UnifiedAttribute:
     default_attribute = {
         "BYTE_COLOR": "color",
@@ -212,7 +246,10 @@ class UnifiedAttribute:
     }
 
     def __init__(
-        self, mesh: Mesh | PointCloud, name: str | int | Attribute, attr: str | None = None
+        self,
+        mesh: Mesh | PointCloud,
+        name: str | int | Attribute,
+        attr: str | None = None,
     ) -> None:
         """
         Initialize an attribute proxy for a unified attribute layer.
@@ -258,12 +295,12 @@ class UnifiedAttribute:
         if not hasattr(collection.data[0], attr):
             raise ValueError(f"property {name} does not have an attribute {attr}")
 
-        if self.domain not in {"CORNER", "FACE", "EDGE", "POINT"}:
+        if self.domain not in {"CORNER", "FACE", "EDGE", "POINT"}:  # pragma: no cover
             raise NotImplementedError(
                 f"cannot create a proxy yet for attributes in domain {self.domain}"
             )
 
-        if self.storage_type not in {"ARRAY"}:
+        if self.storage_type not in {"ARRAY"}: # pragma: no cover
             raise NotImplementedError(
                 f"cannot create a proxy yet for attributes with storage type {self.storage_type}"
             )
@@ -287,11 +324,7 @@ class UnifiedAttribute:
                     mesh, f"attributes['{name}']", attr
                 )
                 self.loop_attributes.get()
-            case _:
-                self.loop_start = None
-                self.loop_total = None
-                self.loop_attributes = None
-
+ 
     def get(self):
         if self.domain == "CORNER":
             self.loop_start.get()
@@ -368,5 +401,32 @@ class UnifiedAttribute:
 
     def __imatmul__(self, matrix):
         self.loop_attributes.__imatmul__(matrix)  # will return a PropertyCollection
-        return self     # but we want to return a UnifiedAttribute
+        return self  # but we want to return a UnifiedAttribute
 
+    def __add__(self, other):
+        return self.loop_attributes.__add__(other)
+
+    def __iadd__(self, other):
+        self.loop_attributes.__iadd__(other)
+        return self
+
+    def __sub__(self, other):
+        return self.loop_attributes.__sub__(other)
+
+    def __isub__(self, other):
+        self.loop_attributes.__isub__(other)
+        return self
+
+    def __mul__(self, other):
+        return self.loop_attributes.__mul__(other)
+
+    def __imul__(self, other):
+        self.loop_attributes.__imul__(other)
+        return self
+
+    def __truediv__(self, other):
+        return self.loop_attributes.__truediv__(other)
+
+    def __itruediv__(self, other):
+        self.loop_attributes.__itruediv__(other)
+        return self

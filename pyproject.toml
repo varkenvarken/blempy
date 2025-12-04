@@ -5,7 +5,7 @@ reportInvalidTypeForm = false
 
 [project]
 name = "blempy"
-version = "0.4.6"
+version = "0.5.0"
 authors = [
   { name="varkenvarken", email="author@example.com" },
 ]

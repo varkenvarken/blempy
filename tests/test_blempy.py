@@ -132,9 +132,13 @@ class TestPropertyCollection:
 
         # mutliplication by the identity matrix should not change anything
         result = test_proxy @ identity3
-        assert result is not test_proxy   # it should return a new result
-        assert np.allclose(result, cube)  # this result should be indentical to the original
-        assert np.allclose(test_proxy.ndarray, cube) # and the original should be untouched
+        assert result is not test_proxy  # it should return a new result
+        assert np.allclose(
+            result, cube
+        )  # this result should be indentical to the original
+        assert np.allclose(
+            test_proxy.ndarray, cube
+        )  # and the original should be untouched
 
         # rotate all vertice 45 degrees clockwise around the z-axis
         rot_z_45deg = Matrix.Rotation(pi / 4, 3, [0, 0, 1])  # a 3x3 matrix
@@ -537,6 +541,25 @@ class TestUnifiedAttribute:
         proxy.get()
         assert np.allclose(original, proxy.loop_attributes.ndarray)
 
+    def test_unified_attribute_non_loop_access(self):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        # quick way to add an vertex crease layer to a mesh
+        obj.data.vertex_creases_ensure()
+
+        # the default name is crease_vert
+        proxy = blempy.UnifiedAttribute(obj.data, "crease_vert")
+
+        proxy.get()
+
+        # an explicit loop instead of an iterator to test access with indexing
+        for i in range(len(proxy)):
+            assert proxy[i] == False
+            proxy[i] = True
+
+        assert np.allclose(proxy.loop_attributes.ndarray, True)
+
     def test_unified_attribute_face(self):
         bpy.ops.mesh.primitive_cube_add()
         obj = bpy.context.active_object
@@ -561,7 +584,32 @@ class TestUnifiedAttribute:
         proxy.get()
         assert np.allclose(original, proxy.loop_attributes.ndarray)
 
-    def test_unified_attribute_vertex_position(self, cube):
+    def test_unified_attribute_matmul(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        # we're gonna test 4x4 matrix multiplication so we need to convert the 3D vectors to 4D vectors
+        proxy.extend()
+
+        # rotate all vertices 45 degrees around the z-axis
+        rot_z_45deg = Matrix.Rotation(pi / 4, 4, [0, 0, 1])
+        result = proxy @ rot_z_45deg
+
+        # compare to the list of vertices rotated one by one
+        s = sin(-pi / 4)
+        c = cos(-pi / 4)
+        cube_rotated = [[v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]] for v in cube]
+        np.allclose(result[:, :3], cube_rotated, atol=1e-6)
+
+
+    def test_unified_attribute_imatmul(self, cube):
         bpy.ops.mesh.primitive_cube_add()
         obj = bpy.context.active_object
 
@@ -616,7 +664,10 @@ class TestUnifiedAttribute:
         s = sin(-pi / 4)
         c = cos(-pi / 4)
         # note that v is a 2d array, so will hape shape = 1,4
-        cube_rotated = [[v[0,0] * c - v[0,1] * s, v[0,0] * s + v[0,1] * c, v[0,2]] for v in proxy]
+        cube_rotated = [
+            [v[0, 0] * c - v[0, 1] * s, v[0, 0] * s + v[0, 1] * c, v[0, 2]]
+            for v in proxy
+        ]
         np.allclose(proxy.loop_attributes.ndarray[:, :3], cube_rotated, atol=1e-6)
 
         # we should not try to copy that extra 4th column back, so drop it before we call set()
@@ -630,3 +681,119 @@ class TestUnifiedAttribute:
         proxy.get()
 
         assert np.allclose(original, proxy.loop_attributes.ndarray)
+
+    def test_unified_attribute_iadd(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        proxy += 1
+
+        assert np.allclose(proxy.loop_attributes.ndarray, cube + 1)
+
+    def test_unified_attribute_add(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        result = proxy + 1
+
+        assert np.allclose(result, cube + 1)
+        assert np.allclose(proxy.loop_attributes.ndarray, cube)
+
+    def test_unified_attribute_isub(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        proxy -= 1
+
+        assert np.allclose(proxy.loop_attributes.ndarray, cube - 1)
+
+    def test_unified_attribute_sub(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        result = proxy - 1
+
+        assert np.allclose(result, cube - 1)
+        assert np.allclose(proxy.loop_attributes.ndarray, cube)
+
+    def test_unified_attribute_imul(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        proxy *= 2
+
+        assert np.allclose(proxy.loop_attributes.ndarray, cube * 2)
+
+    def test_unified_attribute_mul(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        result = proxy * 2
+
+        assert np.allclose(result, cube * 2)
+        assert np.allclose(proxy.loop_attributes.ndarray, cube)
+
+    def test_unified_attribute_itruediv(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        proxy /= 2
+
+        assert np.allclose(proxy.loop_attributes.ndarray, cube / 2)
+
+    def test_unified_attribute_truediv(self, cube):
+        bpy.ops.mesh.primitive_cube_add()
+        obj = bpy.context.active_object
+
+        proxy = blempy.UnifiedAttribute(obj.data, "position")
+        proxy.get()
+
+        # cube has 8 vertices
+        assert len(proxy) == 8
+
+        result = proxy / 2
+
+        assert np.allclose(result, cube / 2)
+        assert np.allclose(proxy.loop_attributes.ndarray, cube)
