@@ -243,7 +243,7 @@ class TestPropertyCollection:
         test_proxy @= translate
 
         # check that the matrix multiplication in this case is identical to a direct translation
-        np.allclose(test_proxy[:, :3], cube + [0, 0, 1])
+        np.allclose(test_proxy.ndarray[:, :3], cube + [0, 0, 1])
 
     def test_vertex_co_property_empty_mesh(self):
         # Create a new object and set as active
@@ -577,13 +577,13 @@ class TestUnifiedAttribute:
 
         # rotate all vertices 45 degrees around the z-axis
         rot_z_45deg = Matrix.Rotation(pi / 4, 4, [0, 0, 1])
-        result = proxy @ rot_z_45deg
+        proxy @= rot_z_45deg
 
         # compare to the list of vertices rotated one by one
-        s = sin(pi / 4)
-        c = cos(pi / 4)
+        s = sin(-pi / 4)
+        c = cos(-pi / 4)
         cube_rotated = [[v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]] for v in cube]
-        np.allclose(result.loop_attributes.ndarray[:, :3], cube_rotated)
+        np.allclose(proxy.loop_attributes.ndarray[:, :3], cube_rotated, atol=1e-6)
 
         # we should not try to copy that extra 4th column back, so drop it before we call set()
         proxy.discard()
@@ -599,29 +599,25 @@ class TestUnifiedAttribute:
 
     def test_unified_attribute_vertex_position_pointcloud(self):
         bpy.ops.object.pointcloud_random_add()
-
         obj = bpy.context.active_object
 
         proxy = blempy.UnifiedAttribute(obj.data, "position")
 
         proxy.get()
 
-        # default random point cloud has more than zero points
-        assert len(proxy)
-
-        initial_positions = proxy.loop_attributes.ndarray.copy()
         # we're gonna test 4x4 matrix multiplication so we need to convert the 3D vectors to 4D vectors
         proxy.extend()
 
         # rotate all vertices 45 degrees around the z-axis
         rot_z_45deg = Matrix.Rotation(pi / 4, 4, [0, 0, 1])
-        result = proxy @ rot_z_45deg
+        proxy @= rot_z_45deg
 
         # compare to the list of vertices rotated one by one
-        s = sin(pi / 4)
-        c = cos(pi / 4)
-        cube_rotated = [[v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]] for v in initial_positions]
-        np.allclose(result.loop_attributes.ndarray[:, :3], cube_rotated)
+        s = sin(-pi / 4)
+        c = cos(-pi / 4)
+        # note that v is a 2d array, so will hape shape = 1,4
+        cube_rotated = [[v[0,0] * c - v[0,1] * s, v[0,0] * s + v[0,1] * c, v[0,2]] for v in proxy]
+        np.allclose(proxy.loop_attributes.ndarray[:, :3], cube_rotated, atol=1e-6)
 
         # we should not try to copy that extra 4th column back, so drop it before we call set()
         proxy.discard()

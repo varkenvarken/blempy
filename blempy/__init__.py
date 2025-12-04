@@ -191,7 +191,8 @@ class PropertyCollection:
         return np.dot(self.ndarray, matrix)
 
     def __imatmul__(self, matrix):
-        return np.dot(self.ndarray, matrix, out=self.ndarray)
+        np.dot(self.ndarray, matrix, out=self.ndarray)
+        return self
 
 class UnifiedAttribute:
     default_attribute = {
@@ -366,7 +367,6 @@ class UnifiedAttribute:
         return self.loop_attributes.__matmul__(matrix)
 
     def __imatmul__(self, matrix):
-        return self.loop_attributes.__imatmul__(matrix)
+        self.loop_attributes.__imatmul__(matrix)  # will return a PropertyCollection
+        return self     # but we want to return a UnifiedAttribute
 
-    def __iadd__(self, other):
-        self.loop_attributes += other
