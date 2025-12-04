@@ -257,6 +257,83 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
     This module is not fully fleshed out yet, and its contents/interface may change
    </p>
   </blockquote>
+  <h2 id="what-problem-are-we-trying-to-solve">
+   What problem are we trying to solve?
+  </h2>
+  <p>
+   If we want to access an attribute layer and work with the data in an efficient way on large meshes, we need to do a couple of things:
+  </p>
+  <ul>
+   <li>
+    <p>
+     get a reference to the attribute layer
+    </p>
+   </li>
+   <li>
+    <p>
+     retrieve the data into a numpy ndarray with the foreach_get() method
+    </p>
+    <p>
+     this also means we have to figure out the shape we need first, allocate the array, then retrieve the data as a flat array and reshape it
+    </p>
+   </li>
+   <li>
+    <p>
+     if the attribute is associated with a loop (face corner), we also need to retrieve the 'loop_start' and 'loop_total' attributes for all faces
+    </p>
+   </li>
+   <li>
+    <p>
+     then we may alter the values of the attribute
+    </p>
+    <p>
+     if we are dealing with loops this means we have to calculate start and end indices for the loops of each face too
+    </p>
+   </li>
+   <li>
+    <p>
+     and finally we can store the updated array back to the mesh
+    </p>
+    <p>
+     where we have to make sure we flatten the array before upload
+    </p>
+   </li>
+  </ul>
+  <p>
+   And although well worth it for large meshes (
+   <a href="https://blog.michelanders.nl/2025/10/perfornce-of-umpy-operations-in-blender.html">
+    see here
+   </a>
+   ), it is also a lot of boiler plate we have to repeat for every attribute layer we want to access, something that
+   <code>
+    blempy
+   </code>
+   can abstract away.
+  </p>
+  <p>
+   Now
+   <code>
+    blempy
+   </code>
+   also utilizes Blender's foreach_get()/foreach_set() to access attributes as Numpy arrays, but does away with much of the boilerplate by figuring out array dimensions and providing convenient iterators and helper functions, even for attributes that are associated with loops (a.k.a. face corners).
+  </p>
+  <p>
+   Example: Assuming
+   <code>
+    mesh
+   </code>
+   is a
+   <code>
+    bpy.types.Mesh
+   </code>
+   object that has a vertex color layer called "Color",  scaling all rgb components of those vertex colors by half reduces to a few lines of code:
+  </p>
+  <pre class="hljs"><code><div>proxy = blempy.UnifiedAttribute(mesh, <span class="hljs-string">"Color"</span>)
+proxy.get()
+<span class="hljs-keyword">for</span> polygon_loops <span class="hljs-keyword">in</span> proxy:
+    polygon_loops[:,:<span class="hljs-number">3</span>] *= <span class="hljs-number">0.5</span>
+proxy.set()
+</div></code></pre>
   <h2 id="key-classes">
    Key classes
   </h2>
@@ -337,7 +414,7 @@ vproxy.extend()                                   <span class="hljs-comment"># c
                                                   <span class="hljs-comment"># can deal with translation too</span>
 matrix = Matrix.Rotation(pi/<span class="hljs-number">4</span>, <span class="hljs-number">4</span>, [<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>])        <span class="hljs-comment"># combine a rotation and</span>
 matrix = matrix @ Matrix.Translation(<span class="hljs-number">4</span>, [<span class="hljs-number">0</span>,<span class="hljs-number">0</span>,<span class="hljs-number">1</span>])  <span class="hljs-comment"># a translation into a single matrix  </span>
-vproxy = vproxy @ matrix                          <span class="hljs-comment"># transform in-place</span>
+vproxy = vproxy @= matrix                         <span class="hljs-comment"># transform in-place</span>
 vproxy.discard()                                  <span class="hljs-comment"># discard the 4th column</span>
 vproxy.set()                                      <span class="hljs-comment"># write back to mesh</span>
 </div></code></pre>
@@ -415,7 +492,7 @@ time you install a new version of Blender.
    </li>
    <li>
     <p>
-     <input id="checkbox1" type="checkbox"/>
+     <input checked="true" id="checkbox1" type="checkbox"/>
      <label for="checkbox1">
       ... possibly even mapped to dunder methods (like
      </label>

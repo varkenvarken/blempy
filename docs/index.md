@@ -9,6 +9,39 @@
 > [!NOTE]  
 > This module is not fully fleshed out yet, and its contents/interface may change
 
+## What problem are we trying to solve?
+
+If we want to access an attribute layer and work with the data in an efficient way on large meshes, we need to do a couple of things:
+
+- get a reference to the attribute layer
+- retrieve the data into a numpy ndarray with the foreach_get() method
+  
+  this also means we have to figure out the shape we need first, allocate the array, then retrieve the data as a flat array and reshape it
+
+- if the attribute is associated with a loop (face corner), we also need to retrieve the 'loop_start' and 'loop_total' attributes for all faces
+
+- then we may alter the values of the attribute
+
+  if we are dealing with loops this means we have to calculate start and end indices for the loops of each face too
+
+- and finally we can store the updated array back to the mesh
+
+  where we have to make sure we flatten the array before upload
+
+And although well worth it for large meshes ([see here](https://blog.michelanders.nl/2025/10/perfornce-of-umpy-operations-in-blender.html)), it is also a lot of boiler plate we have to repeat for every attribute layer we want to access, something that `blempy` can abstract away.
+
+Now `blempy` also utilizes Blender's foreach_get()/foreach_set() to access attributes as Numpy arrays, but does away with much of the boilerplate by figuring out array dimensions and providing convenient iterators and helper functions, even for attributes that are associated with loops (a.k.a. face corners).
+
+Example: Assuming `mesh` is a `bpy.types.Mesh` object that has a vertex color layer called "Color",  scaling all rgb components of those vertex colors by half reduces to a few lines of code:
+
+```python
+proxy = blempy.UnifiedAttribute(mesh, "Color")
+proxy.get()
+for polygon_loops in proxy:
+    polygon_loops[:,:3] *= 0.5
+proxy.set()
+```
+
 ## Key classes
 
 This module contains several utility classes which allow for efficient manipulation of property collections.
@@ -45,7 +78,7 @@ vproxy.extend()                                   # convert to 4D so that matrix
                                                   # can deal with translation too
 matrix = Matrix.Rotation(pi/4, 4, [0,0,1])        # combine a rotation and
 matrix = matrix @ Matrix.Translation(4, [0,0,1])  # a translation into a single matrix  
-vproxy = vproxy @ matrix                          # transform in-place
+vproxy = vproxy @= matrix                         # transform in-place
 vproxy.discard()                                  # discard the 4th column
 vproxy.set()                                      # write back to mesh
 ```
@@ -99,7 +132,7 @@ time you install a new version of Blender.
 ## TODO
 
 - [ ] additional convenience functions for frequently used vector operations like translate, scale, rotate, space conversions, ...
-- [ ] ... possibly even mapped to dunder methods (like `__add__` for translation or `__mul__` for scale, etc.)
+- [x] ... possibly even mapped to dunder methods (like `__add__` for translation or `__mul__` for scale, etc.)
 - [ ] extend AttributeProxy to work with objects types other than Mesh and PointCloud
 
   curve etc.
